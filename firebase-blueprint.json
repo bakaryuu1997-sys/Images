@@ -1,0 +1,120 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project",
+      "description": "Folder/Campaign container for grouping generated images",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the project folder"
+        },
+        "name": {
+          "type": "string",
+          "description": "The user-defined name of the project folder"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when this project was created"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owning user"
+        }
+      },
+      "required": ["id", "name", "createdAt", "userId"]
+    },
+    "GeneratedImage": {
+      "title": "GeneratedImage",
+      "description": "High fidelity image generated with Vertex Imagen",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier"
+        },
+        "url": {
+          "type": "string",
+          "description": "Base64 string or public URL of the generated image Jpeg asset"
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Final enhanced prompt used for generation"
+        },
+        "originalPrompt": {
+          "type": "string",
+          "description": "Original prompt typed by the user"
+        },
+        "style": {
+          "type": "string",
+          "description": "Style modifier chosen from STYLE_PRESETS"
+        },
+        "aspectRatio": {
+          "type": "string",
+          "description": "The aspect ratio code (e.g., 1:1, 16:9)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when image was successfully compiled"
+        },
+        "isFavorite": {
+          "type": "boolean",
+          "description": "Bookmark flag"
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Path reference ID to include in Project folders"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner"
+        }
+      },
+      "required": ["id", "url", "prompt", "createdAt", "isFavorite", "userId"]
+    },
+    "CustomAsset": {
+      "title": "CustomAsset",
+      "description": "Custom prompt style modifier registered by the user",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique symbol id"
+        },
+        "name": {
+          "type": "string",
+          "description": "Visual label"
+        },
+        "token": {
+          "type": "string",
+          "description": "Prompt insertion string modifier"
+        },
+        "type": {
+          "type": "string",
+          "description": "Asset style classification (e.g. style)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID"
+        }
+      },
+      "required": ["id", "name", "token", "userId"]
+    }
+  },
+  "firestore": {
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Directories to group collections of assets and image generations"
+    },
+    "/images/{imageId}": {
+      "schema": "GeneratedImage",
+      "description": "Successfully generated imagery stored in a database index"
+    },
+    "/assets/{assetId}": {
+      "schema": "CustomAsset",
+      "description": "User specific custom tokens and prompt styling assets"
+    }
+  }
+}

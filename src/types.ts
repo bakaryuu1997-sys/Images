@@ -12,6 +12,23 @@ export interface GeneratedImage {
   aspectRatio: "1:1" | "3:4" | "4:3" | "16:9" | "9:16";
   createdAt: string;
   isFavorite: boolean;
+  projectId?: string; // Optional reference to associated project folder
+  userId?: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  createdAt: string;
+  userId?: string;
+}
+
+export interface CustomAsset {
+  id: string;
+  name: string;
+  token: string;
+  type: string;
+  userId?: string;
 }
 
 export interface GenerationSettings {
@@ -21,7 +38,9 @@ export interface GenerationSettings {
   enhancePrompt: boolean;
 }
 
-export type AppView = "home" | "generate" | "gallery" | "settings";
+export type AppVersionLevel = "v1" | "v2" | "v3" | "v4";
+
+export type AppView = "home" | "generate" | "gallery" | "settings" | "htmlStudio";
 
 export interface StylePreset {
   id: string;

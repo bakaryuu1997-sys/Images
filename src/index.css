@@ -113,3 +113,44 @@ body {
   background-image: linear-gradient(to right, #c084fc, #6366f1);
 }
 
+/* Custom Cinematic Motion Styles */
+@keyframes camera-zoom-in {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.15); }
+}
+@keyframes camera-zoom-out {
+  0% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+@keyframes camera-pan-right {
+  0% { transform: scale(1.1) translateX(-3%); }
+  100% { transform: scale(1.1) translateX(3%); }
+}
+@keyframes camera-orbit {
+  0% { transform: scale(1.12) rotate(-1.5deg) translate(-2%, -1%); }
+  50% { transform: scale(1.12) rotate(1.5deg) translate(2%, 1%); }
+  100% { transform: scale(1.12) rotate(-1.5deg) translate(-2%, -1%); }
+}
+@keyframes camera-pulse {
+  0% { filter: brightness(1) saturate(1) contrast(1); }
+  50% { filter: brightness(1.15) saturate(1.2) contrast(1.05); transform: scale(1.04); }
+  100% { filter: brightness(1) saturate(1) contrast(1); }
+}
+
+.animate-camera-zoom-in {
+  animation: camera-zoom-in 6s infinite alternate ease-in-out;
+}
+.animate-camera-zoom-out {
+  animation: camera-zoom-out 6s infinite alternate ease-in-out;
+}
+.animate-camera-pan-right {
+  animation: camera-pan-right 7s infinite alternate ease-in-out;
+}
+.animate-camera-orbit {
+  animation: camera-orbit 10s infinite alternate ease-in-out;
+}
+.animate-camera-pulse {
+  animation: camera-pulse 5s infinite ease-in-out;
+}
+
+

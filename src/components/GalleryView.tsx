@@ -30,9 +30,14 @@ import {
   Bookmark, 
   Filter, 
   Copy, 
-  Check 
+  Check,
+  Folder,
+  FolderOpen,
+  Plus,
+  Sliders
 } from "lucide-react";
-import { GeneratedImage, AppView } from "../types";
+import { GeneratedImage, AppView, AppVersionLevel, Project } from "../types";
+import { Language, translations } from "../locales";
 
 interface GalleryViewProps {
   savedImages: GeneratedImage[];
@@ -40,6 +45,11 @@ interface GalleryViewProps {
   onToggleFavorite: (id: string) => void;
   onReusePrompt: (image: GeneratedImage) => void;
   onViewChange: (view: AppView) => void;
+  language: Language;
+  appVersion: AppVersionLevel;
+  projects?: Project[];
+  onCreateProject?: (name: string) => void;
+  onMoveToProject?: (imageId: string, projectId: string) => void;
 }
 
 export default function GalleryView({
@@ -47,11 +57,20 @@ export default function GalleryView({
   onDeleteImage,
   onToggleFavorite,
   onReusePrompt,
-  onViewChange
+  onViewChange,
+  language,
+  appVersion,
+  projects = [],
+  onCreateProject,
+  onMoveToProject
 }: GalleryViewProps) {
+  const t = translations[language];
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRatio, setFilterRatio] = useState<string>("all");
   const [filterFavorite, setFilterFavorite] = useState(false);
+  const [filterProjectId, setFilterProjectId] = useState<string>("all");
+  const [newProjectName, setNewProjectName] = useState("");
+  const [showCreateProj, setShowCreateProj] = useState(false);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -70,10 +89,11 @@ export default function GalleryView({
       
       const matchRatio = filterRatio === "all" || img.aspectRatio === filterRatio;
       const matchFavorite = !filterFavorite || img.isFavorite;
+      const matchProject = filterProjectId === "all" || (img.projectId === filterProjectId) || (filterProjectId === "unassigned" && !img.projectId);
 
-      return matchSearch && matchRatio && matchFavorite;
+      return matchSearch && matchRatio && matchFavorite && matchProject;
     });
-  }, [savedImages, searchQuery, filterRatio, filterFavorite]);
+  }, [savedImages, searchQuery, filterRatio, filterFavorite, filterProjectId]);
 
   const handleDownload = (img: GeneratedImage, e?: React.MouseEvent) => {
     e?.stopPropagation(); // Prevent modal opening
@@ -121,11 +141,13 @@ export default function GalleryView({
           <div className="flex items-center space-x-2.5">
             <Bookmark size={26} className="text-purple-400" />
             <Typography variant="h4" className="font-display font-extrabold text-white">
-              Creative Gallery
+              {t.gallery.title}
             </Typography>
           </div>
           <p className="text-zinc-400 text-sm mt-1">
-            Browse, export, and favor your synthesized designs. ({savedImages.length} saved)
+            {language === "vi" 
+              ? `Duyệt, xuất bản, và yêu thích các tác phẩm sáng tạo của bạn. (Đã lưu ${savedImages.length} tác phẩm)` 
+              : `Browse, export, and favor your synthesized designs. (${savedImages.length} saved)`}
           </p>
         </div>
 
@@ -135,10 +157,104 @@ export default function GalleryView({
             onClick={() => onViewChange("generate")}
             className="capitalize self-start sm:self-auto bg-gradient-to-r from-purple-500 to-blue-600 text-white font-bold leading-none px-5 py-3 rounded-xl shadow-lg shadow-purple-500/10 text-xs hover:opacity-90 transition-all"
           >
-            Create New Image
+            {language === "vi" ? "Tạo ảnh mới" : "Create New Image"}
           </Button>
         )}
       </div>
+
+      {/* V2/V3/V4 PROJECT DIRECTORY FOLDER COLLAPSIBLE TRACKER */}
+      {appVersion !== "v1" && savedImages.length > 0 && (
+        <div className="p-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md mb-6 space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2.5">
+              <Folder className="text-purple-400" size={18} />
+              <Typography variant="body1" className="font-display font-bold text-zinc-100">
+                {t.v2.projectTitle || "Campaign Project Directories"}
+              </Typography>
+            </div>
+            
+            <button 
+              onClick={() => setShowCreateProj(!showCreateProj)}
+              className="text-xs bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 px-3 py-1.5 rounded-lg border border-purple-500/20 transition-all font-semibold flex items-center space-x-1"
+            >
+              <Plus size={12} />
+              <span>{t.v2.createProjBtn || "Create Directory"}</span>
+            </button>
+          </div>
+
+          {showCreateProj && (
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newProjectName.trim()) return;
+                onCreateProject?.(newProjectName);
+                setNewProjectName("");
+                setShowCreateProj(false);
+              }}
+              className="flex items-center gap-2 max-w-sm animate-slide-up"
+            >
+              <input 
+                type="text"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder={t.v2.projPlaceholder || "New project name..."}
+                className="flex-1 bg-black/30 border border-white/10 px-3 py-1.5 rounded text-xs text-white focus:outline-none focus:border-purple-500"
+              />
+              <button 
+                type="submit"
+                className="px-3 py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded text-xs font-bold font-sans"
+              >
+                {language === "vi" ? "Tạo" : "Create"}
+              </button>
+            </form>
+          )}
+
+          {/* Active list of folders */}
+          <div className="flex flex-wrap gap-2.5 pt-1">
+            <button
+              onClick={() => setFilterProjectId("all")}
+              className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center space-x-2 transition-all ${
+                filterProjectId === "all"
+                  ? "bg-purple-500/15 border-purple-500/30 text-purple-300"
+                  : "bg-black/30 border-white/5 text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              <FolderOpen size={14} />
+              <span>{language === "vi" ? "Tất cả" : "All Projects"} ({savedImages.length})</span>
+            </button>
+
+            {projects.map(proj => {
+              const count = savedImages.filter(img => img.projectId === proj.id).length;
+              return (
+                <button
+                  key={proj.id}
+                  onClick={() => setFilterProjectId(proj.id)}
+                  className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center space-x-2 transition-all ${
+                    filterProjectId === proj.id
+                      ? "bg-purple-500/15 border-purple-500/30 text-purple-300"
+                      : "bg-black/30 border-white/5 text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  <Folder size={14} />
+                  <span>{proj.name} ({count})</span>
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => setFilterProjectId("unassigned")}
+              className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center space-x-2 transition-all ${
+                filterProjectId === "unassigned"
+                  ? "bg-purple-500/15 border-purple-500/30 text-purple-300"
+                  : "bg-black/30 border-white/5 text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              <Folder size={14} className="opacity-40" />
+              <span>{language === "vi" ? "Chưa thuộc Dự án" : "Uncategorized"} ({savedImages.filter(img => !img.projectId).length})</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {savedImages.length === 0 ? (
         /* Empty State */
@@ -147,17 +263,17 @@ export default function GalleryView({
             <Bookmark size={24} />
           </div>
           <Typography variant="h6" className="font-display font-bold text-zinc-200">
-            Gallery Archive Empty
+            {t.gallery.emptyTitle}
           </Typography>
           <p className="text-xs text-zinc-400 leading-relaxed max-w-sm mt-2 font-sans">
-            You don't have any saved masterworks yet. Spin up the generator, synthesize a canvas, and click "Save to Gallery"!
+            {t.gallery.emptySubtitle}
           </p>
           <Button
             variant="outlined"
             onClick={() => onViewChange("generate")}
             className="mt-6 border-white/10 hover:border-white/20 bg-white/5 text-zinc-300 hover:text-white capitalize px-5 py-2.5 rounded-xl font-semibold text-xs"
           >
-            Launch Art Workspace
+            {t.gallery.workspaceBtn}
           </Button>
         </div>
       ) : (
@@ -173,7 +289,7 @@ export default function GalleryView({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search prompt, style presets..."
+                placeholder={t.gallery.searchPlaceholder}
                 className="w-full bg-black/20 hover:bg-black/30 text-white pl-10 pr-4 py-2.5 rounded-xl border border-white/10 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 text-sm font-sans transition-all"
               />
               {searchQuery && (
@@ -181,7 +297,7 @@ export default function GalleryView({
                   onClick={() => setSearchQuery("")}
                   className="absolute right-3.5 top-1/2 transform -translate-y-1/2 text-zinc-500 hover:text-zinc-300 text-xs"
                 >
-                  Clear
+                  {language === "vi" ? "Xoá" : "Clear"}
                 </button>
               )}
             </div>
@@ -190,7 +306,7 @@ export default function GalleryView({
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-zinc-500 font-mono hidden lg:inline mr-1 flex items-center space-x-1.5">
                 <Filter size={12} />
-                <span>ASPECT FILTER:</span>
+                <span>{language === "vi" ? "LỌC KHUNG HÌNH:" : "ASPECT FILTER:"}</span>
               </span>
               {["all", "1:1", "16:9", "9:16", "4:3", "3:4"].map((ratio) => (
                 <button
@@ -202,7 +318,7 @@ export default function GalleryView({
                       : "text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10"
                   }`}
                 >
-                  {ratio === "all" ? "All Type" : ratio}
+                  {ratio === "all" ? t.gallery.allAspect : ratio}
                 </button>
               ))}
 
@@ -218,18 +334,18 @@ export default function GalleryView({
                 }`}
               >
                 <Heart size={12} fill={filterFavorite ? "currentColor" : "none"} />
-                <span>Favorites</span>
+                <span>{language === "vi" ? "Yêu thích" : "Favorites"}</span>
               </button>
             </div>
           </div>
 
-              {/* Core Art Cards Grid list */}
-              {filteredImages.length === 0 ? (
-                <div className="text-center py-16 text-zinc-500 text-sm font-sans">
-                  No artworks matched your search filters. Try typing different keywords or clearing filters.
-                </div>
-              ) : (
-                <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {/* Core Art Cards Grid list */}
+          {filteredImages.length === 0 ? (
+            <div className="text-center py-16 text-zinc-500 text-sm font-sans">
+              {t.gallery.noResults}
+            </div>
+          ) : (
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                   {filteredImages.map((img) => (
                     <motion.div
                       key={img.id}
@@ -362,22 +478,24 @@ export default function GalleryView({
               <div className="md:col-span-5 md:border-l border-white/10 p-6 flex flex-col justify-between">
                 <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] text-zinc-400 font-mono tracking-widest block uppercase font-bold">Image Blueprint Specifications</span>
+                    <span className="text-[10px] text-zinc-400 font-mono tracking-widest block uppercase font-bold">
+                      {language === "vi" ? "Thông số thiết kế bản vẽ ảnh" : "Image Blueprint Specifications"}
+                    </span>
                     <Typography variant="h6" className="font-display font-bold text-zinc-100 mt-1 pb-3 border-b border-white/10">
-                      Canvas Details
+                      {language === "vi" ? "Chi tiết khung thiết kế" : "Canvas Details"}
                     </Typography>
                   </div>
 
                   {/* Prompt Text details */}
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-xs font-semibold text-zinc-300">
-                      <span>Synthesized Prompt</span>
+                      <span>{language === "vi" ? "Ý tưởng thiết kế (Prompt)" : "Synthesized Prompt"}</span>
                       <button
                         onClick={() => handleCopyPrompt(activeImage.prompt)}
                         className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center space-x-1 capitalize"
                       >
                         {copySuccess ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
-                        <span>{copySuccess ? "Copied" : "Copy Prompt text"}</span>
+                        <span>{copySuccess ? (language === "vi" ? "Đã sao chép" : "Copied") : (language === "vi" ? "Sao chép Prompt" : "Copy Prompt text")}</span>
                       </button>
                     </div>
                     <p className="text-xs text-zinc-300 italic font-sans leading-relaxed bg-black/35 p-3.5 rounded-xl border border-white/10">
@@ -388,20 +506,45 @@ export default function GalleryView({
                   {/* Metadata Chips metadata details */}
                   <div className="grid grid-cols-2 gap-4 pt-1">
                     <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center animate-fade-in">
-                      <span className="text-[9px] text-zinc-500 font-mono block">STYLE PRESET</span>
+                      <span className="text-[9px] text-zinc-500 font-mono block">
+                        {language === "vi" ? "PHONG CÁCH" : "STYLE PRESET"}
+                      </span>
                       <span className="text-xs font-bold text-zinc-200 mt-1 block truncate capitalize">{activeImage.style}</span>
                     </div>
 
                     <div className="bg-white/5 p-3 rounded-xl border border-white/10 text-center animate-fade-in">
-                      <span className="text-[9px] text-zinc-500 font-mono block">ASPECT RATIO</span>
+                      <span className="text-[9px] text-zinc-500 font-mono block">
+                        {language === "vi" ? "TỈ LỆ HÌNH" : "ASPECT RATIO"}
+                      </span>
                       <span className="text-xs font-bold text-purple-400 mt-1 block">{activeImage.aspectRatio}</span>
                     </div>
                   </div>
 
+                  {/* Campaign Project Selector Option for V2+ */}
+                  {appVersion !== "v1" && projects.length > 0 && (
+                    <div className="space-y-1.5 pt-1 animate-fade-in">
+                      <label className="text-[10px] text-zinc-400 font-mono tracking-widest block uppercase font-bold">
+                        {language === "vi" ? "Thư mục Chiến dịch (V2)" : "Campaign Project Folder"}
+                      </label>
+                      <select
+                        value={activeImage.projectId || ""}
+                        onChange={(e) => onMoveToProject?.(activeImage.id, e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 font-sans cursor-pointer transition-all"
+                      >
+                        <option value="">{language === "vi" ? "-- Chưa gán Dự án --" : "-- Unassigned Project --"}</option>
+                        {projects.map((proj) => (
+                          <option key={proj.id} value={proj.id}>
+                            {proj.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   {/* Date specs */}
                   <div className="flex items-center space-x-2 text-xs text-zinc-400 bg-white/5 p-2.5 rounded-lg border border-white/5">
                     <Calendar size={12} className="text-blue-400" />
-                    <span>Chronos Log: {new Date(activeImage.createdAt).toLocaleString()}</span>
+                    <span>{language === "vi" ? "Thời lưu trữ:" : "Chronos Log:"} {new Date(activeImage.createdAt).toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -414,7 +557,7 @@ export default function GalleryView({
                       className="flex-1 py-2.5 border-white/10 text-zinc-300 hover:text-white hover:border-white/20 hover:bg-white/5 capitalize font-bold text-xs flex items-center justify-center space-x-1.5"
                     >
                       <RefreshCw size={13} />
-                      <span>Edit & Re-use Prompt</span>
+                      <span>{language === "vi" ? "Sửa & Dùng lại Prompt" : "Edit & Re-use Prompt"}</span>
                     </Button>
 
                     <IconButton
@@ -435,7 +578,7 @@ export default function GalleryView({
                       onClick={() => handleDownload(activeImage)}
                       className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-blue-600 hover:opacity-90 text-white font-bold capitalize text-xs shadow-lg text-center"
                     >
-                      Export Resolution (Download)
+                      {language === "vi" ? "Tải xuống độ phân giải cao" : "Export Resolution (Download)"}
                     </Button>
                     
                     <IconButton
