@@ -1,0 +1,6 @@
+{
+  "name": "AI Image Creator",
+  "description": "Generate high-quality images from text prompts with AI-driven prompt enhancement, custom configuration options, and a personalized gallery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
